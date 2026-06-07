@@ -1,17 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { db, normalizeUrl, type Company } from '../src/lib/server/db.js';
+import Database from 'better-sqlite3';
+import { mkdirSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
-type ImportRow = {
-  name: string;
-  website: string;
-  shipsToSvalbard: 0 | 1;
-  vatRefund: 0 | 1;
-  notes: string;
-};
-
-function parseCsv(input: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
+function parseCsv(input) {
+  const rows = [];
+  let row = [];
   let field = '';
   let quoted = false;
 
@@ -55,31 +48,34 @@ function parseCsv(input: string): string[][] {
   return rows;
 }
 
-function marked(value: string | undefined): boolean {
+function normalizeUrl(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function marked(value) {
   return Boolean(value?.trim());
 }
 
-function cleanName(value: string): string {
+function cleanName(value) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
-function websiteFromName(name: string): string {
+function websiteFromName(name) {
   const candidate = name.split(' - ')[0]?.trim().replace(/\/$/, '') ?? '';
   if (/^https?:\/\//i.test(candidate) || /^www\./i.test(candidate)) return normalizeUrl(candidate);
   if (/^[a-z0-9æøå.-]+\.[a-z]{2,}(\/.*)?$/i.test(candidate)) return normalizeUrl(candidate);
   return '';
 }
 
-function buildNotes(row: string[]): string {
-  const notes = [
-    row[6]?.trim(),
-    'Importert fra google sheets'
-  ];
-
+function buildNotes(row) {
+  const notes = [row[6]?.trim(), 'Importert fra google sheets'];
   return notes.filter(Boolean).join('\n');
 }
 
-function mapRows(rows: string[][]): ImportRow[] {
+function mapRows(rows) {
   return rows
     .slice(1)
     .map((row) => {
@@ -97,12 +93,31 @@ function mapRows(rows: string[][]): ImportRow[] {
     .filter((row) => row.name);
 }
 
-const csvPath = process.argv[2];
+const csvPath = process.argv[2] ?? 'data/old-sheet.csv';
+const dbPath = resolve(process.env.DB_PATH ?? 'data/svalbard.sqlite');
 
-if (!csvPath) {
-  console.error('Usage: pnpm tsx scripts/import-old-sheet.ts <path-to-csv>');
-  process.exit(1);
-}
+mkdirSync(dirname(dbPath), { recursive: true });
+
+const db = new Database(dbPath);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS companies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    website TEXT,
+    ships_to_svalbard INTEGER NOT NULL DEFAULT 0,
+    vat_refund INTEGER NOT NULL DEFAULT 0,
+    shipping_methods TEXT,
+    categories TEXT,
+    notes TEXT,
+    source_url TEXT,
+    status TEXT NOT NULL DEFAULT 'published',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+`);
 
 const rows = mapRows(parseCsv(readFileSync(csvPath, 'utf8')));
 
@@ -127,12 +142,12 @@ const insert = db.prepare(
     (@name, @website, @shipsToSvalbard, @vatRefund, '', '', @notes, '', 'published')`
 );
 
-const result = db.transaction((importRows: ImportRow[]) => {
+const result = db.transaction((importRows) => {
   let inserted = 0;
   let updated = 0;
 
   for (const row of importRows) {
-    const existing = existingByName.get(row.name) as Pick<Company, 'id'> | undefined;
+    const existing = existingByName.get(row.name);
     if (existing) {
       update.run({ ...row, id: existing.id });
       updated += 1;
@@ -146,5 +161,6 @@ const result = db.transaction((importRows: ImportRow[]) => {
 })(rows);
 
 console.log(`Imported ${rows.length} rows from ${csvPath}`);
+console.log(`Database: ${dbPath}`);
 console.log(`Inserted: ${result.inserted}`);
 console.log(`Updated: ${result.updated}`);

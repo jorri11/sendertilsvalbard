@@ -28,3 +28,13 @@ docker compose up --build
 ```
 
 The SQLite database is stored in `./data`.
+
+## Import old Google Sheets data
+
+Place the exported CSV at `data/old-sheet.csv`, then run:
+
+```bash
+pnpm import:old-sheet
+```
+
+In Docker/Coolify, make sure the file exists at `/app/data/old-sheet.csv` inside the container. The import uses `DB_PATH`, so with the provided compose file it writes to `/app/data/svalbard.sqlite`. The import script runs with plain Node and only needs production dependencies.

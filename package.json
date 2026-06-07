@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "seed": "tsx scripts/seed-admin.ts"
+    "seed": "tsx scripts/seed-admin.ts",
+    "import:old-sheet": "node scripts/import-old-sheet.mjs"
   },
   "dependencies": {
     "@sveltejs/adapter-node": "^5.2.13",
