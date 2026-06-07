@@ -1,13 +1,15 @@
-import { hashPassword } from '$lib/server/auth';
+import { createAdminUser } from '$lib/server/auth';
 import { db, type User } from '$lib/server/db';
-import { fail } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = () => {
+export const load: PageServerLoad = ({ locals }) => {
+  if (!locals.user?.is_superuser) error(403, 'Kun superbruker kan administrere admins.');
+
   return {
-    users: db.prepare('SELECT id, email, created_at FROM users ORDER BY created_at DESC').all() as Pick<
+    users: db.prepare('SELECT id, email, is_superuser, created_at FROM users ORDER BY created_at DESC').all() as Pick<
       User,
-      'id' | 'email' | 'created_at'
+      'id' | 'email' | 'is_superuser' | 'created_at'
     >[],
     adminRequests: db
       .prepare("SELECT id, email, message, created_at FROM admin_requests WHERE status = 'pending' ORDER BY created_at ASC")
@@ -16,7 +18,9 @@ export const load: PageServerLoad = () => {
 };
 
 export const actions: Actions = {
-  create: async ({ request }) => {
+  create: async ({ locals, request }) => {
+    if (!locals.user?.is_superuser) error(403, 'Kun superbruker kan opprette admins.');
+
     const form = await request.formData();
     const email = String(form.get('email') ?? '').trim().toLowerCase();
     const password = String(form.get('password') ?? '');
@@ -30,14 +34,16 @@ export const actions: Actions = {
     }
 
     try {
-      db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, hashPassword(password));
+      createAdminUser(email, password);
     } catch {
       return fail(400, { message: 'Denne adminbrukeren finnes allerede.', email });
     }
 
     return { success: true };
   },
-  approveRequest: async ({ request }) => {
+  approveRequest: async ({ locals, request }) => {
+    if (!locals.user?.is_superuser) error(403, 'Kun superbruker kan godkjenne adminforespørsler.');
+
     const form = await request.formData();
     const id = Number(form.get('id'));
     const password = String(form.get('password') ?? '');
@@ -54,16 +60,19 @@ export const actions: Actions = {
     }
 
     try {
-      db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(adminRequest.email, hashPassword(password));
+      db.transaction(() => {
+        createAdminUser(adminRequest.email, password);
+        db.prepare("UPDATE admin_requests SET status = 'approved' WHERE id = ?").run(id);
+      })();
     } catch {
       return fail(400, { message: 'Denne adminbrukeren finnes allerede.' });
     }
 
-    db.prepare("UPDATE admin_requests SET status = 'approved' WHERE id = ?").run(id);
-
     return { approved: true };
   },
-  denyRequest: async ({ request }) => {
+  denyRequest: async ({ locals, request }) => {
+    if (!locals.user?.is_superuser) error(403, 'Kun superbruker kan avslå adminforespørsler.');
+
     const form = await request.formData();
     const id = Number(form.get('id'));
 

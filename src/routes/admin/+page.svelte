@@ -19,7 +19,7 @@
     {#if data.submissions.length === 0}
       <div class="aurora-panel rounded-lg p-6 text-ice/70">Ingen forslag venter på godkjenning.</div>
     {:else}
-      {#each data.submissions as submission}
+      {#each data.submissions as submission (submission.id)}
         <article class="aurora-panel rounded-lg p-5">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -66,7 +66,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each data.companies as company}
+        {#each data.companies as company (company.id)}
           <tr class="border-t border-white/10">
             <td class="px-4 py-3 font-semibold text-ice">{company.name}</td>
             <td class="hidden px-4 py-3 text-ice/70 md:table-cell">

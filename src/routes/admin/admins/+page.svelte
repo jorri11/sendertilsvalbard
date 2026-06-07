@@ -52,7 +52,7 @@
     <p class="text-ice/70">Ingen nye adminforespørsler.</p>
   {:else}
     <div class="grid gap-3">
-      {#each data.adminRequests as request}
+      {#each data.adminRequests as request (request.id)}
         <div class="rounded border border-white/10 bg-white/[0.04] p-4">
           <div
             class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -135,9 +135,14 @@
       Eksisterende admins
     </h3>
     <div class="mt-5 grid gap-3">
-      {#each data.users as user}
+      {#each data.users as user (user.id)}
         <div class="rounded border border-white/10 bg-white/[0.04] p-4">
-          <p class="font-bold text-ice">{user.email}</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-bold text-ice">{user.email}</p>
+            {#if user.is_superuser}
+              <span class="rounded bg-ember/20 px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em] text-ember">Superbruker</span>
+            {/if}
+          </div>
           <p class="mt-1 text-sm text-ice/60">
             Opprettet {new Date(user.created_at).toLocaleDateString("no-NO")}
           </p>

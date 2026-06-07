@@ -39,6 +39,7 @@ export type User = {
   id: number;
   email: string;
   password_hash: string;
+  is_superuser: 0 | 1;
   created_at: string;
 };
 
@@ -94,6 +95,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    is_superuser INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -122,6 +124,13 @@ if (!submissionColumnNames.has('company_id')) {
 
 if (!submissionColumnNames.has('submission_type')) {
   db.exec("ALTER TABLE submissions ADD COLUMN submission_type TEXT NOT NULL DEFAULT 'new_company'");
+}
+
+const userColumns = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
+const userColumnNames = new Set(userColumns.map((column) => column.name));
+
+if (!userColumnNames.has('is_superuser')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_superuser INTEGER NOT NULL DEFAULT 0');
 }
 
 export function normalizeUrl(value: FormDataEntryValue | null): string {

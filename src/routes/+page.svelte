@@ -76,7 +76,7 @@
         name="category"
       >
         <option value="">Alle kategorier</option>
-        {#each data.categories as category}
+        {#each data.categories as category (category)}
           <option value={category} selected={data.filters.category === category}
             >{category}</option
           >
@@ -94,7 +94,7 @@
       </div>
     {:else}
       <div class="grid gap-4">
-        {#each data.companies as company}
+        {#each data.companies as company (company.id)}
           <article class="aurora-panel rounded-lg p-5">
             <div
               class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"

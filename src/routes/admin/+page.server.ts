@@ -1,4 +1,5 @@
 import { db, upsertCompanyFromForm, type Company, type Submission } from '$lib/server/db';
+import { selectedCategories } from '$lib/categories';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -32,7 +33,9 @@ export const actions: Actions = {
     if (submission.ships_to_svalbard) companyForm.set('ships_to_svalbard', 'on');
     if (submission.vat_refund) companyForm.set('vat_refund', 'on');
     companyForm.set('shipping_methods', submission.shipping_methods ?? '');
-    companyForm.set('categories', submission.categories ?? '');
+    for (const category of selectedCategories(submission.categories)) {
+      companyForm.append('categories', category);
+    }
     companyForm.set('notes', submission.notes ?? '');
     companyForm.set('source_url', submission.source_url ?? '');
 
