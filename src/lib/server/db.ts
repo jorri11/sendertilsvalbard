@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { normalizeCategories } from '$lib/categories';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -19,6 +20,8 @@ export type Company = {
 
 export type Submission = {
   id: number;
+  company_id: number | null;
+  submission_type: 'new_company' | 'change_request';
   company_name: string;
   website: string | null;
   ships_to_svalbard: 0 | 1;
@@ -100,7 +103,33 @@ db.exec(`
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS admin_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    message TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+const submissionColumns = db.prepare('PRAGMA table_info(submissions)').all() as { name: string }[];
+const submissionColumnNames = new Set(submissionColumns.map((column) => column.name));
+
+if (!submissionColumnNames.has('company_id')) {
+  db.exec('ALTER TABLE submissions ADD COLUMN company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL');
+}
+
+if (!submissionColumnNames.has('submission_type')) {
+  db.exec("ALTER TABLE submissions ADD COLUMN submission_type TEXT NOT NULL DEFAULT 'new_company'");
+}
+
+export function normalizeUrl(value: FormDataEntryValue | null): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
 
 export function normalizeBoolean(value: FormDataEntryValue | boolean | null): 0 | 1 {
   return value === 'on' || value === 'true' || value === true ? 1 : 0;
@@ -139,13 +168,13 @@ export function companyCategories(): string[] {
 export function upsertCompanyFromForm(form: FormData, id?: number): number {
   const data = {
     name: String(form.get('name') ?? '').trim(),
-    website: String(form.get('website') ?? '').trim(),
+    website: normalizeUrl(form.get('website')),
     ships_to_svalbard: normalizeBoolean(form.get('ships_to_svalbard')),
     vat_refund: normalizeBoolean(form.get('vat_refund')),
     shipping_methods: String(form.get('shipping_methods') ?? '').trim(),
-    categories: String(form.get('categories') ?? '').trim(),
+    categories: normalizeCategories(form.getAll('categories')),
     notes: String(form.get('notes') ?? '').trim(),
-    source_url: String(form.get('source_url') ?? '').trim()
+    source_url: normalizeUrl(form.get('source_url'))
   };
 
   if (!data.name) {

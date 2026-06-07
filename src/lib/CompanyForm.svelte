@@ -1,4 +1,6 @@
 <script>
+  import CategoryPicker from '$lib/CategoryPicker.svelte';
+
   let { company = {}, submitLabel = 'Lagre' } = $props();
 </script>
 
@@ -9,7 +11,7 @@
   </label>
   <label class="grid gap-2">
     <span class="font-bold text-ice">Nettside</span>
-    <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="website" type="url" value={company.website ?? ''} />
+    <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="website" inputmode="url" placeholder="www.eksempel.no" value={company.website ?? ''} />
   </label>
   <div class="grid gap-3 sm:grid-cols-2">
     <label class="flex items-center gap-3 rounded border border-white/10 bg-white/[0.04] p-4 font-semibold">
@@ -25,13 +27,10 @@
     <span class="font-bold text-ice">Fraktmetoder</span>
     <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="shipping_methods" value={company.shipping_methods ?? ''} />
   </label>
-  <label class="grid gap-2">
-    <span class="font-bold text-ice">Kategorier</span>
-    <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="categories" value={company.categories ?? ''} />
-  </label>
+  <CategoryPicker value={company.categories ?? ''} />
   <label class="grid gap-2">
     <span class="font-bold text-ice">Kilde</span>
-    <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="source_url" type="url" value={company.source_url ?? ''} />
+    <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="source_url" inputmode="url" placeholder="www.eksempel.no/fraktinfo" value={company.source_url ?? ''} />
   </label>
   <label class="grid gap-2">
     <span class="font-bold text-ice">Notater</span>

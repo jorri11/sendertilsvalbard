@@ -17,13 +17,16 @@
   </div>
   <div class="grid gap-4">
     {#if data.submissions.length === 0}
-      <div class="aurora-panel rounded-lg p-6 text-ice/70">Ingen forslag venter pa godkjenning.</div>
+      <div class="aurora-panel rounded-lg p-6 text-ice/70">Ingen forslag venter på godkjenning.</div>
     {:else}
       {#each data.submissions as submission}
         <article class="aurora-panel rounded-lg p-5">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h3 class="font-display text-xl font-bold text-ice">{submission.company_name}</h3>
+              <p class="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-ember">
+                {submission.submission_type === 'change_request' ? `Endring av ${submission.current_company_name ?? 'eksisterende firma'}` : 'Nytt firma'}
+              </p>
               {#if submission.website}
                 <a class="text-sm font-semibold text-aurora hover:text-ice" href={submission.website} target="_blank" rel="noreferrer">{submission.website}</a>
               {/if}
@@ -37,7 +40,7 @@
               </form>
               <form method="POST" action="?/reject">
                 <input name="id" type="hidden" value={submission.id} />
-                <button class="rounded border border-white/10 px-4 py-2 font-bold hover:border-rose hover:text-rose">Avsla</button>
+                <button class="rounded border border-white/10 px-4 py-2 font-bold hover:border-rose hover:text-rose">Avslå</button>
               </form>
             </div>
           </div>

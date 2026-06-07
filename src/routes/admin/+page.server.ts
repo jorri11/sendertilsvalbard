@@ -5,7 +5,15 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = () => {
   return {
     companies: db.prepare('SELECT * FROM companies ORDER BY updated_at DESC, name ASC').all() as Company[],
-    submissions: db.prepare("SELECT * FROM submissions WHERE status = 'pending' ORDER BY created_at ASC").all() as Submission[]
+    submissions: db
+      .prepare(
+        `SELECT submissions.*, companies.name AS current_company_name
+         FROM submissions
+         LEFT JOIN companies ON companies.id = submissions.company_id
+         WHERE submissions.status = 'pending'
+         ORDER BY submissions.created_at ASC`
+      )
+      .all() as (Submission & { current_company_name: string | null })[]
   };
 };
 
@@ -28,7 +36,11 @@ export const actions: Actions = {
     companyForm.set('notes', submission.notes ?? '');
     companyForm.set('source_url', submission.source_url ?? '');
 
-    upsertCompanyFromForm(companyForm);
+    if (submission.submission_type === 'change_request' && submission.company_id) {
+      upsertCompanyFromForm(companyForm, submission.company_id);
+    } else {
+      upsertCompanyFromForm(companyForm);
+    }
     db.prepare("UPDATE submissions SET status = 'approved' WHERE id = ?").run(id);
     redirect(303, '/admin');
   },

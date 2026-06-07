@@ -10,6 +10,7 @@
       <p class="mt-1 text-sm text-ice/60">Innlogget som {data.user.email}</p>
     </div>
     <div class="flex gap-2">
+      <a class="rounded border border-white/10 px-4 py-3 font-bold hover:border-violet hover:text-violet" href="/admin/admins">Admins</a>
       <a class="rounded border border-white/10 px-4 py-3 font-bold hover:border-aurora hover:text-aurora" href="/admin/companies/new">Nytt firma</a>
       <form method="POST" action="/login?/logout">
         <button class="rounded border border-white/10 px-4 py-3 font-bold hover:border-rose hover:text-rose">Logg ut</button>
