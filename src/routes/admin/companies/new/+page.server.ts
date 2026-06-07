@@ -1,0 +1,15 @@
+import { upsertCompanyFromForm } from '$lib/server/db';
+import { fail, redirect } from '@sveltejs/kit';
+import type { Actions } from './$types';
+
+export const actions: Actions = {
+  default: async ({ request }) => {
+    try {
+      const id = upsertCompanyFromForm(await request.formData());
+      redirect(303, `/admin/companies/${id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Kunne ikke lagre firma.';
+      return fail(400, { message });
+    }
+  }
+};
