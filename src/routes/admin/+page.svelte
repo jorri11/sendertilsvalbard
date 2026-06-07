@@ -76,10 +76,6 @@
             <td class="px-4 py-3">
               <div class="flex flex-wrap gap-2">
                 <a class="rounded border border-white/10 px-3 py-2 font-bold hover:border-aurora hover:text-aurora" href={`/admin/companies/${company.id}`}>Rediger</a>
-                <form method="POST" action="?/deleteCompany">
-                  <input name="id" type="hidden" value={company.id} />
-                  <button class="rounded border border-white/10 px-3 py-2 font-bold hover:border-rose hover:text-rose">Arkiver</button>
-                </form>
               </div>
             </td>
           </tr>

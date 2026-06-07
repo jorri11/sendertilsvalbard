@@ -49,11 +49,5 @@ export const actions: Actions = {
     const id = Number(form.get('id'));
     db.prepare("UPDATE submissions SET status = 'rejected' WHERE id = ?").run(id);
     redirect(303, '/admin');
-  },
-  deleteCompany: async ({ request }) => {
-    const form = await request.formData();
-    const id = Number(form.get('id'));
-    db.prepare("UPDATE companies SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
-    redirect(303, '/admin');
   }
 };
