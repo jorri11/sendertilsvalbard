@@ -12,10 +12,11 @@ export const actions: Actions = {
   default: async ({ params, request }) => {
     try {
       upsertCompanyFromForm(await request.formData(), Number(params.id));
-      redirect(303, `/admin/companies/${params.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Kunne ikke lagre firma.';
       return fail(400, { message });
     }
+
+    redirect(303, `/admin/companies/${params.id}`);
   }
 };
