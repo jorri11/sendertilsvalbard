@@ -93,7 +93,7 @@ function mapRows(rows) {
     .filter((row) => row.name);
 }
 
-const csvPath = process.argv[2] ?? 'data/old-sheet.csv';
+const csvPath = process.argv[2] ?? 'scripts/old-sheet.csv';
 const dbPath = resolve(process.env.DB_PATH ?? 'data/svalbard.sqlite');
 
 mkdirSync(dirname(dbPath), { recursive: true });
