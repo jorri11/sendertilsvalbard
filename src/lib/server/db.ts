@@ -17,6 +17,16 @@ export type Company = typeof companies.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type AdminRequest = typeof adminRequests.$inferSelect;
+export type PendingSubmission = Submission & {
+	current_company_name: string | null;
+	current_company_website: string | null;
+	current_company_ships_to_svalbard: number | null;
+	current_company_vat_refund: number | null;
+	current_company_shipping_methods: string | null;
+	current_company_categories: string | null;
+	current_company_notes: string | null;
+	current_company_source_url: string | null;
+};
 
 type CompanyFilters = {
 	q?: string;
@@ -113,7 +123,7 @@ export function createSubmissionFromForm(form: FormData, options: { companyId?: 
 	return Number(result.lastInsertRowid);
 }
 
-export function listPendingSubmissions(): (Submission & { current_company_name: string | null })[] {
+export function listPendingSubmissions(): PendingSubmission[] {
 	return db
 		.select({
 			id: submissions.id,
@@ -129,7 +139,14 @@ export function listPendingSubmissions(): (Submission & { current_company_name: 
 			source_url: submissions.source_url,
 			status: submissions.status,
 			created_at: submissions.created_at,
-			current_company_name: companies.name
+			current_company_name: companies.name,
+			current_company_website: companies.website,
+			current_company_ships_to_svalbard: companies.ships_to_svalbard,
+			current_company_vat_refund: companies.vat_refund,
+			current_company_shipping_methods: companies.shipping_methods,
+			current_company_categories: companies.categories,
+			current_company_notes: companies.notes,
+			current_company_source_url: companies.source_url
 		})
 		.from(submissions)
 		.leftJoin(companies, eq(companies.id, submissions.company_id))
