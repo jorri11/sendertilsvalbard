@@ -27,7 +27,6 @@ export const submissions = sqliteTable('submissions', {
 	shipping_methods: text('shipping_methods'),
 	categories: text('categories'),
 	notes: text('notes'),
-	contact_email: text('contact_email'),
 	source_url: text('source_url'),
 	status: text('status').notNull().default('pending'),
 	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)

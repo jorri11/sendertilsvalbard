@@ -53,10 +53,6 @@
       <span class="font-bold text-ice">Hva bør endres?</span>
       <textarea class="min-h-36 rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="notes">{data.company.notes ?? ''}</textarea>
     </label>
-    <label class="grid gap-2">
-      <span class="font-bold text-ice">E-post for oppfølging</span>
-      <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="contact_email" type="email" />
-    </label>
     <button class="rounded bg-aurora px-5 py-3 font-black text-polar hover:bg-ice">Send endringsforslag</button>
   </form>
 </main>

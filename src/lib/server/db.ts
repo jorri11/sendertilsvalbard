@@ -106,7 +106,6 @@ export function createSubmissionFromForm(form: FormData, options: { companyId?: 
 			shipping_methods: String(form.get('shipping_methods') ?? '').trim(),
 			categories: normalizeCategories(form.getAll('categories')),
 			notes: String(form.get('notes') ?? '').trim(),
-			contact_email: String(form.get('contact_email') ?? '').trim(),
 			source_url: normalizeUrl(form.get('source_url'))
 		})
 		.run();
@@ -127,7 +126,6 @@ export function listPendingSubmissions(): (Submission & { current_company_name: 
 			shipping_methods: submissions.shipping_methods,
 			categories: submissions.categories,
 			notes: submissions.notes,
-			contact_email: submissions.contact_email,
 			source_url: submissions.source_url,
 			status: submissions.status,
 			created_at: submissions.created_at,
@@ -153,7 +151,6 @@ export function getPendingSubmissionById(id: number): Submission | undefined {
 			shipping_methods: submissions.shipping_methods,
 			categories: submissions.categories,
 			notes: submissions.notes,
-			contact_email: submissions.contact_email,
 			source_url: submissions.source_url,
 			status: submissions.status,
 			created_at: submissions.created_at
