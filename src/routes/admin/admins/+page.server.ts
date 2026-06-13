@@ -1,5 +1,11 @@
 import { createAdminUser } from '$lib/server/auth';
-import { db, type User } from '$lib/server/db';
+import {
+  getPendingAdminRequest,
+  listPendingAdminRequests,
+  listUsers,
+  markAdminRequestApproved,
+  markAdminRequestDenied
+} from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -7,13 +13,8 @@ export const load: PageServerLoad = ({ locals }) => {
   if (!locals.user?.is_superuser) error(403, 'Kun superbruker kan administrere admins.');
 
   return {
-    users: db.prepare('SELECT id, email, is_superuser, created_at FROM users ORDER BY created_at DESC').all() as Pick<
-      User,
-      'id' | 'email' | 'is_superuser' | 'created_at'
-    >[],
-    adminRequests: db
-      .prepare("SELECT id, email, message, created_at FROM admin_requests WHERE status = 'pending' ORDER BY created_at ASC")
-      .all() as { id: number; email: string; message: string | null; created_at: string }[]
+    users: listUsers(),
+    adminRequests: listPendingAdminRequests()
   };
 };
 
@@ -47,9 +48,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const id = Number(form.get('id'));
     const password = String(form.get('password') ?? '');
-    const adminRequest = db
-      .prepare("SELECT id, email FROM admin_requests WHERE id = ? AND status = 'pending'")
-      .get(id) as { id: number; email: string } | undefined;
+    const adminRequest = getPendingAdminRequest(id);
 
     if (!adminRequest) {
       return fail(404, { message: 'Forespørselen finnes ikke lenger.' });
@@ -60,10 +59,8 @@ export const actions: Actions = {
     }
 
     try {
-      db.transaction(() => {
-        createAdminUser(adminRequest.email, password);
-        db.prepare("UPDATE admin_requests SET status = 'approved' WHERE id = ?").run(id);
-      })();
+      createAdminUser(adminRequest.email, password);
+      markAdminRequestApproved(id);
     } catch {
       return fail(400, { message: 'Denne adminbrukeren finnes allerede.' });
     }
@@ -76,7 +73,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const id = Number(form.get('id'));
 
-    db.prepare("UPDATE admin_requests SET status = 'denied' WHERE id = ? AND status = 'pending'").run(id);
+    markAdminRequestDenied(id);
 
     return { denied: true };
   }

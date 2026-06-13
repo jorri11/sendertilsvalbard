@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { createAdminRequest } from '$lib/server/db';
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
@@ -12,7 +12,7 @@ export const actions: Actions = {
       return fail(400, { message: 'E-post må fylles ut.' });
     }
 
-    db.prepare('INSERT INTO admin_requests (email, message) VALUES (?, ?)').run(email, message);
+    createAdminRequest(email, message);
 
     return { success: true };
   }
