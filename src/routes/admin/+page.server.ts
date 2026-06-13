@@ -1,20 +1,19 @@
-import { db, upsertCompanyFromForm, type Company, type Submission } from '$lib/server/db';
+import {
+	getPendingSubmissionById,
+	listAdminCompanies,
+	listPendingSubmissions,
+	markSubmissionApproved,
+	markSubmissionRejected,
+	upsertCompanyFromForm
+} from '$lib/server/db';
 import { selectedCategories } from '$lib/categories';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = () => {
   return {
-    companies: db.prepare('SELECT * FROM companies ORDER BY updated_at DESC, name ASC').all() as Company[],
-    submissions: db
-      .prepare(
-        `SELECT submissions.*, companies.name AS current_company_name
-         FROM submissions
-         LEFT JOIN companies ON companies.id = submissions.company_id
-         WHERE submissions.status = 'pending'
-         ORDER BY submissions.created_at ASC`
-      )
-      .all() as (Submission & { current_company_name: string | null })[]
+    companies: listAdminCompanies(),
+    submissions: listPendingSubmissions()
   };
 };
 
@@ -22,9 +21,7 @@ export const actions: Actions = {
   approve: async ({ request }) => {
     const form = await request.formData();
     const id = Number(form.get('id'));
-    const submission = db.prepare("SELECT * FROM submissions WHERE id = ? AND status = 'pending'").get(id) as
-      | Submission
-      | undefined;
+    const submission = getPendingSubmissionById(id);
     if (!submission) return fail(404, { message: 'Forslaget finnes ikke.' });
 
     const companyForm = new FormData();
@@ -44,13 +41,13 @@ export const actions: Actions = {
     } else {
       upsertCompanyFromForm(companyForm);
     }
-    db.prepare("UPDATE submissions SET status = 'approved' WHERE id = ?").run(id);
+    markSubmissionApproved(id);
     redirect(303, '/admin');
   },
   reject: async ({ request }) => {
     const form = await request.formData();
     const id = Number(form.get('id'));
-    db.prepare("UPDATE submissions SET status = 'rejected' WHERE id = ?").run(id);
+    markSubmissionRejected(id);
     redirect(303, '/admin');
   }
 };

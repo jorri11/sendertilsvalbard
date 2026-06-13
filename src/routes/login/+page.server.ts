@@ -1,5 +1,5 @@
 import { createSession, deleteSession, verifyPassword } from '$lib/server/auth';
-import { db, type User } from '$lib/server/db';
+import { getUserByEmail } from '$lib/server/db';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -12,7 +12,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const email = String(form.get('email') ?? '').trim().toLowerCase();
     const password = String(form.get('password') ?? '');
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
+    const user = getUserByEmail(email);
 
     if (!user || !verifyPassword(password, user.password_hash)) {
       return fail(400, { message: 'Feil e-post eller passord.', email });

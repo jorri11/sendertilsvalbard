@@ -1,9 +1,9 @@
-import { db, upsertCompanyFromForm, type Company } from '$lib/server/db';
+import { getCompanyById, upsertCompanyFromForm } from '$lib/server/db';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ params }) => {
-  const company = db.prepare('SELECT * FROM companies WHERE id = ?').get(Number(params.id)) as Company | undefined;
+  const company = getCompanyById(Number(params.id));
   if (!company) error(404, 'Firma finnes ikke.');
   return { company };
 };

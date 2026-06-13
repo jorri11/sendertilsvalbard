@@ -1,6 +1,7 @@
-import { db } from './db.js';
+import { db, getFirstUser, getUserByEmail, type User } from './db.js';
+import { sessions, users } from './db/schema.js';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import type { User } from './db.js';
+import { and, eq, sql } from 'drizzle-orm';
 
 const sessionDays = 14;
 
@@ -28,52 +29,50 @@ export function ensureEnvAdmin(): void {
     return;
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  const existing = getUserByEmail(email);
   if (existing) {
-    db.prepare('UPDATE users SET is_superuser = 1 WHERE email = ?').run(email);
+    db.update(users).set({ is_superuser: 1 }).where(eq(users.email, email)).run();
     return;
   }
 
-  db.prepare('INSERT INTO users (email, password_hash, is_superuser) VALUES (?, ?, 1)').run(email, hashPassword(password));
+  db.insert(users).values({ email, password_hash: hashPassword(password), is_superuser: 1 }).run();
 }
 
 export function ensureAtLeastOneSuperuser(): void {
-  const existing = db.prepare('SELECT id FROM users WHERE is_superuser = 1 LIMIT 1').get();
+  const existing = db.select({ id: users.id }).from(users).where(eq(users.is_superuser, 1)).limit(1).get();
   if (existing) return;
 
-  const firstUser = db.prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1').get() as Pick<User, 'id'> | undefined;
+  const firstUser = getFirstUser();
   if (!firstUser) return;
 
-  db.prepare('UPDATE users SET is_superuser = 1 WHERE id = ?').run(firstUser.id);
+  db.update(users).set({ is_superuser: 1 }).where(eq(users.id, firstUser.id)).run();
 }
 
 export function createAdminUser(email: string, password: string): void {
-  db.prepare('INSERT INTO users (email, password_hash, is_superuser) VALUES (?, ?, 0)').run(email, hashPassword(password));
+  db.insert(users).values({ email, password_hash: hashPassword(password), is_superuser: 0 }).run();
 }
 
 export function createSession(userId: number): { id: string; expires: string } {
   const id = randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000).toISOString();
-  db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(id, userId, expires);
+  db.insert(sessions).values({ id, user_id: userId, expires_at: expires }).run();
   return { id, expires };
 }
 
 export function getUserFromSession(sessionId: string | undefined): SessionUser | null {
   if (!sessionId) return null;
   const row = db
-    .prepare(
-      `SELECT users.id, users.email, users.is_superuser
-       FROM sessions
-       JOIN users ON users.id = sessions.user_id
-       WHERE sessions.id = ? AND sessions.expires_at > datetime('now')`
-    )
-    .get(sessionId) as SessionUser | undefined;
+    .select({ id: users.id, email: users.email, is_superuser: users.is_superuser })
+    .from(sessions)
+    .innerJoin(users, eq(users.id, sessions.user_id))
+    .where(and(eq(sessions.id, sessionId), sql`${sessions.expires_at} > datetime('now')`))
+    .get();
   return row ?? null;
 }
 
 export function deleteSession(sessionId: string | undefined): void {
   if (!sessionId) return;
-  db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+  db.delete(sessions).where(eq(sessions.id, sessionId)).run();
 }
 
 ensureEnvAdmin();
