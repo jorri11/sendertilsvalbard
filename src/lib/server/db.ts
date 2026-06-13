@@ -1,7 +1,7 @@
 import { normalizeCategories } from '$lib/categories';
-import { env } from '$env/dynamic/private';
 import { and, asc, desc, eq, isNotNull, like, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -23,89 +23,16 @@ type CompanyFilters = {
 	category?: string;
 };
 
-const dbPath = resolve(env.DATABASE_URL ?? process.env.DB_PATH ?? 'data/svalbard.sqlite');
+const dbPath = resolve(process.env.DATABASE_URL ?? process.env.DB_PATH ?? 'data/svalbard.sqlite');
 mkdirSync(dirname(dbPath), { recursive: true });
 
 const client = new Database(dbPath);
 client.pragma('journal_mode = WAL');
 client.pragma('foreign_keys = ON');
 
-client.exec(`
-  CREATE TABLE IF NOT EXISTS companies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    website TEXT,
-    ships_to_svalbard INTEGER NOT NULL DEFAULT 0,
-    vat_refund INTEGER NOT NULL DEFAULT 0,
-    shipping_methods TEXT,
-    categories TEXT,
-    notes TEXT,
-    source_url TEXT,
-    status TEXT NOT NULL DEFAULT 'published',
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS submissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
-    submission_type TEXT NOT NULL DEFAULT 'new_company',
-    company_name TEXT NOT NULL,
-    website TEXT,
-    ships_to_svalbard INTEGER NOT NULL DEFAULT 0,
-    vat_refund INTEGER NOT NULL DEFAULT 0,
-    shipping_methods TEXT,
-    categories TEXT,
-    notes TEXT,
-    contact_email TEXT,
-    source_url TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    is_superuser INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires_at TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS admin_requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL,
-    message TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-
-const submissionColumns = client.prepare('PRAGMA table_info(submissions)').all() as { name: string }[];
-const submissionColumnNames = new Set(submissionColumns.map((column) => column.name));
-
-if (!submissionColumnNames.has('company_id')) {
-	client.exec('ALTER TABLE submissions ADD COLUMN company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL');
-}
-
-if (!submissionColumnNames.has('submission_type')) {
-	client.exec("ALTER TABLE submissions ADD COLUMN submission_type TEXT NOT NULL DEFAULT 'new_company'");
-}
-
-const userColumns = client.prepare('PRAGMA table_info(users)').all() as { name: string }[];
-const userColumnNames = new Set(userColumns.map((column) => column.name));
-
-if (!userColumnNames.has('is_superuser')) {
-	client.exec('ALTER TABLE users ADD COLUMN is_superuser INTEGER NOT NULL DEFAULT 0');
-}
-
 export const db = drizzle(client, { schema: { adminRequests, companies, sessions, submissions, users } });
+
+migrate(db, { migrationsFolder: resolve(process.cwd(), 'drizzle') });
 
 export function normalizeUrl(value: FormDataEntryValue | null): string {
 	const raw = String(value ?? '').trim();
