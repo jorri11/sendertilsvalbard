@@ -25,7 +25,7 @@
       <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="email" type="email" required />
     </label>
     <label class="grid gap-2">
-      <span class="font-bold text-ice">Melding</span>
+      <span class="font-bold text-ice">Melding <span class="ml-2 text-xs font-semibold uppercase tracking-[0.12em] text-ice/50">valgfritt</span></span>
       <textarea class="min-h-28 rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="message"></textarea>
     </label>
     <button class="rounded bg-aurora px-5 py-3 font-black text-polar hover:bg-ice">Send</button>
