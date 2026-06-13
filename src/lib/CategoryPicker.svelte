@@ -1,7 +1,7 @@
 <script>
   import { companyCategories, selectedCategories } from '$lib/categories';
 
-  let { value = '', legend = 'Kategorier' } = $props();
+  let { value = '', legend = 'Kategorier (valgfritt)' } = $props();
   let selected = $derived(new Set(selectedCategories(value)));
 </script>
 
