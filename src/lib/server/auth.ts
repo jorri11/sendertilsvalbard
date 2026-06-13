@@ -75,4 +75,10 @@ export function deleteSession(sessionId: string | undefined): void {
   db.delete(sessions).where(eq(sessions.id, sessionId)).run();
 }
 
-ensureEnvAdmin();
+let adminBootstrapComplete = false;
+
+export function bootstrapAdminUser(): void {
+  if (adminBootstrapComplete) return;
+  ensureEnvAdmin();
+  adminBootstrapComplete = true;
+}

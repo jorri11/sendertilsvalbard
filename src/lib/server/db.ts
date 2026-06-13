@@ -32,7 +32,13 @@ client.pragma('foreign_keys = ON');
 
 export const db = drizzle(client, { schema: { adminRequests, companies, sessions, submissions, users } });
 
-migrate(db, { migrationsFolder: resolve(process.cwd(), 'drizzle') });
+let migrationsApplied = false;
+
+export function migrateDatabase(): void {
+	if (migrationsApplied) return;
+	migrate(db, { migrationsFolder: resolve(process.cwd(), 'drizzle') });
+	migrationsApplied = true;
+}
 
 export function normalizeUrl(value: FormDataEntryValue | null): string {
 	const raw = String(value ?? '').trim();
