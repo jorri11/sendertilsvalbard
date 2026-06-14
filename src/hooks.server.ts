@@ -8,6 +8,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const host = event.url.hostname;
 
   if (host === "www.sendertilsvalbard.no") {
+    console.log("wwww redirect");
     throw redirect(
       301,
       `https://sendertilsvalbard.no${event.url.pathname}${event.url.search}`,
