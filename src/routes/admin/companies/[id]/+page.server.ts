@@ -1,4 +1,4 @@
-import { getCompanyById, upsertCompanyFromForm } from '$lib/server/db';
+import { getCompanyById, markCompanyDeleted, upsertCompanyFromForm } from '$lib/server/db';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -9,7 +9,7 @@ export const load: PageServerLoad = ({ params }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ params, request }) => {
+  save: async ({ params, request }) => {
     try {
       upsertCompanyFromForm(await request.formData(), Number(params.id));
     } catch (error) {
@@ -18,5 +18,13 @@ export const actions: Actions = {
     }
 
     redirect(303, `/admin/companies/${params.id}`);
+  },
+  delete: async ({ params }) => {
+    const id = Number(params.id);
+    const company = getCompanyById(id);
+    if (!company) return fail(404, { message: 'Firma finnes ikke.' });
+
+    markCompanyDeleted(id);
+    redirect(303, '/admin');
   }
 };

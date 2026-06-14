@@ -1,10 +1,10 @@
 <script>
   import CategoryPicker from '$lib/CategoryPicker.svelte';
 
-  let { company = {}, submitLabel = 'Lagre' } = $props();
+  let { company = {}, submitLabel = 'Lagre', action = undefined } = $props();
 </script>
 
-<form class="aurora-panel grid gap-5 rounded-lg p-6" method="POST">
+<form class="aurora-panel grid gap-5 rounded-lg p-6" method="POST" {action}>
   <label class="grid gap-2">
     <span class="font-bold text-ice">Firmanavn</span>
     <input class="rounded border border-white/10 bg-white/10 px-4 py-3 outline-none focus:border-aurora" name="name" value={company.name ?? ''} required />
