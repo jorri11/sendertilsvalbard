@@ -1,5 +1,5 @@
 <script>
-  let { form } = $props();
+  let { data, form } = $props();
 </script>
 
 <svelte:head>
@@ -8,6 +8,7 @@
 
 <main class="mx-auto grid min-h-[calc(100vh-73px)] max-w-md place-items-center px-4 py-10">
   <form class="aurora-panel grid w-full gap-5 rounded-lg p-6" method="POST" action="?/login">
+    <input type="hidden" name="redirectTo" value={data.redirectTo} />
     <div>
       <p class="text-sm font-bold uppercase tracking-[0.25em] text-aurora">Backoffice</p>
       <h1 class="mt-3 font-display text-3xl font-bold text-ice">Logg inn</h1>
