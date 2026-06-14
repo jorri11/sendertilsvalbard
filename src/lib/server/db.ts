@@ -1,5 +1,5 @@
 import { normalizeCategories } from '$lib/categories';
-import { and, asc, desc, eq, isNotNull, like, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, like, ne, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
@@ -114,11 +114,11 @@ export function companyCategories(): string[] {
 }
 
 export function listAdminCompanies(): Company[] {
-	return db.select().from(companies).orderBy(desc(companies.updated_at), asc(companies.name)).all();
+	return db.select().from(companies).where(ne(companies.status, 'deleted')).orderBy(desc(companies.updated_at), asc(companies.name)).all();
 }
 
 export function getCompanyById(id: number): Company | undefined {
-	return db.select().from(companies).where(eq(companies.id, id)).get();
+	return db.select().from(companies).where(and(eq(companies.id, id), ne(companies.status, 'deleted'))).get();
 }
 
 export function getPublishedCompanyById(id: number): Company | undefined {
@@ -263,6 +263,16 @@ export function markAdminRequestApproved(id: number): void {
 
 export function markAdminRequestDenied(id: number): void {
 	db.update(adminRequests).set({ status: 'denied' }).where(and(eq(adminRequests.id, id), eq(adminRequests.status, 'pending'))).run();
+}
+
+export function markCompanyDeleted(id: number): void {
+	db.update(companies)
+		.set({
+			status: 'deleted',
+			updated_at: sql`CURRENT_TIMESTAMP`
+		})
+		.where(eq(companies.id, id))
+		.run();
 }
 
 export function upsertCompanyFromForm(form: FormData, id?: number): number {
