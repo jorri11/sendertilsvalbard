@@ -33,6 +33,9 @@
     current_company_categories: string | null;
     current_company_notes: string | null;
     current_company_source_url: string | null;
+    possible_duplicate_company_id: number | null;
+    possible_duplicate_company_name: string | null;
+    possible_duplicate_company_website: string | null;
   };
 
   function formatFieldValue(field: ChangeField, value: unknown): string {
@@ -122,7 +125,7 @@
                     <p class="mt-3 text-sm text-ice/60">Ingen forskjeller mot nåværende firma.</p>
                   {:else}
                     <div class="mt-3 grid gap-2">
-                      {#each changeRows as change}
+                      {#each changeRows as change (change.label)}
                         <div class="rounded border border-white/10 bg-polar/40 p-3">
                           <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="font-semibold text-ice">{change.label}</p>
@@ -141,6 +144,27 @@
                         </div>
                       {/each}
                     </div>
+                  {/if}
+                </div>
+              {/if}
+              {#if submission.possible_duplicate_company_id}
+                <div class="mt-4 rounded border border-ember/40 bg-ember/10 p-4">
+                  <p class="text-sm font-black uppercase tracking-[0.16em] text-ember">Mulig duplikat</p>
+                  <p class="mt-2 text-sm text-ice/80">
+                    Dette forslaget ligner på
+                    <a class="font-bold text-ice underline decoration-ember/60 underline-offset-4 hover:text-ember" href={`/admin/companies/${submission.possible_duplicate_company_id}`}>
+                      {submission.possible_duplicate_company_name}
+                    </a>.
+                  </p>
+                  {#if submission.possible_duplicate_company_website}
+                    <a
+                      class="mt-2 inline-block text-sm font-semibold text-ember hover:text-ice"
+                      href={submission.possible_duplicate_company_website}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {submission.possible_duplicate_company_website}
+                    </a>
                   {/if}
                 </div>
               {/if}

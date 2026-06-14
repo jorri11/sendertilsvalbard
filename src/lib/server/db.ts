@@ -1,5 +1,5 @@
 import { normalizeCategories } from '$lib/categories';
-import { and, asc, desc, eq, isNotNull, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, like, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
@@ -26,6 +26,9 @@ export type PendingSubmission = Submission & {
 	current_company_categories: string | null;
 	current_company_notes: string | null;
 	current_company_source_url: string | null;
+	possible_duplicate_company_id: number | null;
+	possible_duplicate_company_name: string | null;
+	possible_duplicate_company_website: string | null;
 };
 
 type CompanyFilters = {
@@ -59,6 +62,25 @@ export function normalizeUrl(value: FormDataEntryValue | null): string {
 
 export function normalizeBoolean(value: FormDataEntryValue | boolean | null): 0 | 1 {
 	return value === 'on' || value === 'true' || value === true ? 1 : 0;
+}
+
+function normalizeCompanyName(value: string | null | undefined): string {
+	return String(value ?? '')
+		.toLowerCase()
+		.replace(/&/g, 'og')
+		.replace(/\b(as|asa|ab|aps|a\/s|ltd|limited|inc|gmbh)\b/g, '')
+		.replace(/[^a-z0-9æøå]/g, '');
+}
+
+function normalizeHostname(value: string | null | undefined): string {
+	const raw = String(value ?? '').trim();
+	if (!raw) return '';
+
+	try {
+		return new URL(normalizeUrl(raw)).hostname.replace(/^www\./i, '').toLowerCase();
+	} catch {
+		return '';
+	}
 }
 
 export function listCompanies({ q = '', category = '' }: CompanyFilters = {}): Company[] {
@@ -124,7 +146,7 @@ export function createSubmissionFromForm(form: FormData, options: { companyId?: 
 }
 
 export function listPendingSubmissions(): PendingSubmission[] {
-	return db
+	const rows = db
 		.select({
 			id: submissions.id,
 			company_id: submissions.company_id,
@@ -153,6 +175,27 @@ export function listPendingSubmissions(): PendingSubmission[] {
 		.where(eq(submissions.status, 'pending'))
 		.orderBy(asc(submissions.created_at))
 		.all();
+
+	const existingCompanies = listAdminCompanies();
+
+	return rows.map((submission) => {
+		const suggestedName = normalizeCompanyName(submission.company_name);
+		const suggestedHostname = normalizeHostname(submission.website);
+		const duplicate = submission.submission_type === 'new_company'
+			? existingCompanies.find((company) => {
+				const sameName = suggestedName && suggestedName === normalizeCompanyName(company.name);
+				const sameHostname = suggestedHostname && suggestedHostname === normalizeHostname(company.website);
+				return sameName || sameHostname;
+			})
+			: undefined;
+
+		return {
+			...submission,
+			possible_duplicate_company_id: duplicate?.id ?? null,
+			possible_duplicate_company_name: duplicate?.name ?? null,
+			possible_duplicate_company_website: duplicate?.website ?? null
+		};
+	});
 }
 
 export function getPendingSubmissionById(id: number): Submission | undefined {

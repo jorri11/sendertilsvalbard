@@ -1,6 +1,6 @@
 import { bootstrapAdminUser, getUserFromSession } from "$lib/server/auth";
 import { migrateDatabase } from "$lib/server/db";
-import { redirect, type Handle } from "@sveltejs/kit";
+import { type Handle } from "@sveltejs/kit";
 
 let bootstrapComplete = false;
 
