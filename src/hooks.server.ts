@@ -6,7 +6,7 @@ let bootstrapComplete = false;
 
 export const handle: Handle = async ({ event, resolve }) => {
   const host = event.url.hostname;
-
+  console.log(host, host == "www.sendertilsvalbard.no");
   if (host === "www.sendertilsvalbard.no") {
     console.log("wwww redirect");
     throw redirect(
