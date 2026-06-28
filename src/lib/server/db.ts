@@ -1,5 +1,5 @@
 import { normalizeCategories } from '$lib/categories';
-import { and, asc, desc, eq, isNotNull, like, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, like, ne, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
@@ -8,6 +8,7 @@ import { dirname, resolve } from 'node:path';
 import {
 	adminRequests,
 	companies,
+	pageviews,
 	sessions,
 	submissions,
 	users,
@@ -17,6 +18,7 @@ export type Company = typeof companies.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type AdminRequest = typeof adminRequests.$inferSelect;
+export type Pageview = typeof pageviews.$inferSelect;
 export type PendingSubmission = Submission & {
 	current_company_name: string | null;
 	current_company_website: string | null;
@@ -36,6 +38,19 @@ type CompanyFilters = {
 	category?: string;
 };
 
+export type PageviewInput = {
+	path: string;
+	referrerSource: string;
+	deviceType: string;
+};
+
+export type PageviewSummary = {
+	totalLast30Days: number;
+	viewsToday: number;
+	topPages: { path: string; views: number }[];
+	dailyTotals: { date: string; views: number }[];
+};
+
 const dbPath = resolve(process.env.DATABASE_URL ?? process.env.DB_PATH ?? 'data/svalbard.sqlite');
 mkdirSync(dirname(dbPath), { recursive: true });
 
@@ -43,7 +58,7 @@ const client = new Database(dbPath);
 client.pragma('journal_mode = WAL');
 client.pragma('foreign_keys = ON');
 
-export const db = drizzle(client, { schema: { adminRequests, companies, sessions, submissions, users } });
+export const db = drizzle(client, { schema: { adminRequests, companies, pageviews, sessions, submissions, users } });
 
 let migrationsApplied = false;
 
@@ -81,6 +96,107 @@ function normalizeHostname(value: string | null | undefined): string {
 	} catch {
 		return '';
 	}
+}
+
+function localDateString(date = new Date()): string {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
+function daysAgo(days: number): string {
+	const date = new Date();
+	date.setDate(date.getDate() - days);
+	return localDateString(date);
+}
+
+function toNumber(value: number | string | null | undefined): number {
+	return Number(value ?? 0);
+}
+
+export function recordPageview({ path, referrerSource, deviceType }: PageviewInput): void {
+	db.insert(pageviews)
+		.values({
+			date: localDateString(),
+			path,
+			referrer_source: referrerSource,
+			device_type: deviceType,
+			views: 1
+		})
+		.onConflictDoUpdate({
+			target: [
+				pageviews.date,
+				pageviews.path,
+				pageviews.referrer_source,
+				pageviews.device_type
+			],
+			set: {
+				views: sql`${pageviews.views} + 1`,
+				updated_at: sql`CURRENT_TIMESTAMP`
+			}
+		})
+		.run();
+}
+
+export function getPageviewSummary(): PageviewSummary {
+	const today = localDateString();
+	const last30Days = daysAgo(29);
+	const last14Days = daysAgo(13);
+	const totalViews = sql<number>`coalesce(sum(${pageviews.views}), 0)`;
+	const topPageViews = sql<number>`sum(${pageviews.views})`;
+
+	const totals = db
+		.select({
+			totalLast30Days: totalViews,
+			viewsToday: sql<number>`coalesce(sum(case when ${pageviews.date} = ${today} then ${pageviews.views} else 0 end), 0)`
+		})
+		.from(pageviews)
+		.where(gte(pageviews.date, last30Days))
+		.get();
+
+	const topPages = db
+		.select({
+			path: pageviews.path,
+			views: topPageViews
+		})
+		.from(pageviews)
+		.where(gte(pageviews.date, last30Days))
+		.groupBy(pageviews.path)
+		.orderBy(desc(topPageViews))
+		.limit(5)
+		.all()
+		.map((row) => ({
+			path: row.path,
+			views: toNumber(row.views)
+		}));
+
+	const dailyRows = db
+		.select({
+			date: pageviews.date,
+			views: sql<number>`sum(${pageviews.views})`
+		})
+		.from(pageviews)
+		.where(gte(pageviews.date, last14Days))
+		.groupBy(pageviews.date)
+		.orderBy(asc(pageviews.date))
+		.all();
+
+	const viewsByDate = new Map(dailyRows.map((row) => [row.date, toNumber(row.views)]));
+	const dailyTotals = Array.from({ length: 14 }, (_, index) => {
+		const date = daysAgo(13 - index);
+		return {
+			date,
+			views: viewsByDate.get(date) ?? 0
+		};
+	});
+
+	return {
+		totalLast30Days: toNumber(totals?.totalLast30Days),
+		viewsToday: toNumber(totals?.viewsToday),
+		topPages,
+		dailyTotals
+	};
 }
 
 export function listCompanies({ q = '', category = '' }: CompanyFilters = {}): Company[] {

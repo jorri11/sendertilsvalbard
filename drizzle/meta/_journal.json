@@ -15,6 +15,13 @@
       "when": 1781392154392,
       "tag": "0001_military_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782604304965,
+      "tag": "0002_boring_devos",
+      "breakpoints": true
     }
   ]
 }
