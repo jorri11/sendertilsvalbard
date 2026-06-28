@@ -14,6 +14,8 @@
 
   type ChangeField = (typeof changeFields)[number];
 
+  const numberFormatter = new Intl.NumberFormat('no-NO');
+
   type ChangeRequestSubmission = {
     submission_type: string;
     company_id: number | null;
@@ -45,6 +47,22 @@
 
     const normalized = String(value ?? '').trim();
     return normalized || 'Ikke satt';
+  }
+
+  function formatNumber(value: number): string {
+    return numberFormatter.format(value);
+  }
+
+  function formatShortDate(value: string): string {
+    return new Date(`${value}T00:00:00`).toLocaleDateString('no-NO', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+  }
+
+  function dailyBarWidth(views: number): string {
+    const maxViews = Math.max(...data.analytics.dailyTotals.map((day) => day.views), 1);
+    return `${Math.max(Math.round((views / maxViews) * 100), views > 0 ? 8 : 0)}%`;
   }
 
   function getChangeRows(submission: ChangeRequestSubmission) {
@@ -96,6 +114,63 @@
 {#if form?.message}
   <div class="mb-6 rounded border border-rose/40 bg-rose/10 p-4 font-semibold text-rose">{form.message}</div>
 {/if}
+
+<section class="mb-10">
+  <div class="mb-4 flex items-end justify-between gap-4">
+    <h2 class="font-display text-2xl font-bold text-ice">Sidevisninger</h2>
+    <span class="rounded bg-aurora/20 px-3 py-1 text-sm font-bold text-aurora">siste 30 dager</span>
+  </div>
+
+  <div class="aurora-panel rounded-lg p-5">
+    <div class="grid gap-4 lg:grid-cols-[240px_1fr]">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <div class="rounded border border-white/10 bg-white/[0.03] p-4">
+          <p class="text-sm font-bold text-ice/62">Totalt</p>
+          <p class="mt-2 font-display text-4xl font-black text-aurora">{formatNumber(data.analytics.totalLast30Days)}</p>
+        </div>
+        <div class="rounded border border-white/10 bg-white/[0.03] p-4">
+          <p class="text-sm font-bold text-ice/62">I dag</p>
+          <p class="mt-2 font-display text-4xl font-black text-violet">{formatNumber(data.analytics.viewsToday)}</p>
+        </div>
+      </div>
+
+      <div class="grid gap-4 xl:grid-cols-2">
+        <div class="rounded border border-white/10 bg-polar/40 p-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <p class="font-bold text-ice">Mest viste sider</p>
+          </div>
+          {#if data.analytics.topPages.length === 0}
+            <p class="text-sm text-ice/60">Ingen sidevisninger registrert ennå.</p>
+          {:else}
+            <div class="grid gap-2">
+              {#each data.analytics.topPages as page (page.path)}
+                <div class="flex items-center justify-between gap-4 rounded border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span class="min-w-0 truncate font-semibold text-ice">{page.path}</span>
+                  <span class="shrink-0 text-sm font-bold text-aurora">{formatNumber(page.views)}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <div class="rounded border border-white/10 bg-polar/40 p-4">
+          <p class="mb-3 font-bold text-ice">Siste 14 dager</p>
+          <div class="grid gap-2">
+            {#each data.analytics.dailyTotals as day (day.date)}
+              <div class="grid grid-cols-[52px_1fr_48px] items-center gap-3 text-sm">
+                <span class="font-semibold text-ice/60">{formatShortDate(day.date)}</span>
+                <div class="h-2 overflow-hidden rounded bg-white/10">
+                  <div class="h-full rounded bg-aurora" style={`width: ${dailyBarWidth(day.views)}`}></div>
+                </div>
+                <span class="text-right font-bold text-ice">{formatNumber(day.views)}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section class="mb-10">
   <div class="mb-4 flex items-end justify-between gap-4">

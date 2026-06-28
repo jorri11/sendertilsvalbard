@@ -1,8 +1,11 @@
 <script>
+  import PageviewTracker from "$lib/PageviewTracker.svelte";
   import "../app.css";
 
   let { children, data } = $props();
 </script>
+
+<PageviewTracker />
 
 <div class="min-h-screen">
   <header class="border-b border-white/10 bg-polar/70 backdrop-blur">

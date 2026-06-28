@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const companies = sqliteTable('companies', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
@@ -56,3 +56,21 @@ export const adminRequests = sqliteTable('admin_requests', {
 	status: text('status').notNull().default('pending'),
 	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
 });
+
+export const pageviews = sqliteTable('pageviews', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	date: text('date').notNull(),
+	path: text('path').notNull(),
+	referrer_source: text('referrer_source').notNull().default('direct'),
+	device_type: text('device_type').notNull().default('unknown'),
+	views: integer('views').notNull().default(0),
+	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+	uniqueIndex('pageviews_daily_dimension_unique').on(
+		table.date,
+		table.path,
+		table.referrer_source,
+		table.device_type
+	)
+]);

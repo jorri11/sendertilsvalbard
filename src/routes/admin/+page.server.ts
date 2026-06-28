@@ -1,5 +1,6 @@
 import {
 	getPendingSubmissionById,
+	getPageviewSummary,
 	listAdminCompanies,
 	listPendingSubmissions,
 	markSubmissionApproved,
@@ -13,6 +14,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = () => {
   return {
     companies: listAdminCompanies(),
+    analytics: getPageviewSummary(),
     submissions: listPendingSubmissions()
   };
 };
